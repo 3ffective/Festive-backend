@@ -1,42 +1,41 @@
 package com.effective.festive.service;
 
 import com.effective.festive.model.Festival;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
+import com.opencsv.bean.CsvToBeanBuilder;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
+import java.io.FileReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class FestivalService {
-    @Value("${festive.api.url}")
-    private String apiUrl;
+    private static final String CSV_FILE_PATH = "busan_festivals.csv";
 
-    private final RestTemplate rt = new RestTemplate();
-    private final ObjectMapper mapper = new ObjectMapper();
-
-    //공공  데이터에서 전체 축제 목록 가져옴
+    //CSV 파일에서 전체 축제 목록 가져옴
     public List<Festival> getAllFestivals() throws Exception {
-        String json = rt.getForObject(apiUrl, String.class);
-        JsonNode items = mapper.readTree(json)
-                .path("response")
-                .path("body")
-                .path("items")
-                .path("item");
-        List<Festival> list = new ArrayList<>();
-        for (JsonNode node : items) {
-            list.add(mapper.treeToValue(node, Festival.class));
+        ClassPathResource resource = new ClassPathResource(CSV_FILE_PATH);
+
+        try (InputStreamReader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
+            List<Festival> festivals = new CsvToBeanBuilder<Festival>(reader)
+                    .withType(Festival.class)
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .build()
+                    .parse();
+
+            return festivals;
         }
-        return list;
     }
 
-    //날짜 기준 오름차순 조회
+    //날짜 기준 오름차순 조회 (운영기간 기준)
     public List<Festival> getUpcomingFestivals() throws Exception {
         return getAllFestivals()
-                .stream().sorted(Comparator.comparing(Festival::getStartDate))
+                .stream()
+                .filter(f -> f.getOperatingPeriod() != null && !f.getOperatingPeriod().trim().isEmpty())
+                .sorted(Comparator.comparing(f -> f.getOperatingPeriod()))
                 .collect(Collectors.toList());
     }
 
@@ -56,5 +55,6 @@ public class FestivalService {
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("축제를 찾을 수 없습니다"));
     }
+
 
 }

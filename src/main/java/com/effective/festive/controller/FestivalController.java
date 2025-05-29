@@ -18,11 +18,18 @@ public class FestivalController {
         this.service = service;
     }
 
+    // 전체 축제 조회 API
+    @GetMapping
+    public ResponseEntity<List<Festival>> getAllFestivals() throws Exception {
+        return ResponseEntity.ok(service.getAllFestivals());
+    }
+
     // 날짜 빠른 기준 축제 조회 API
     @GetMapping("/upcoming")
     public ResponseEntity<List<Festival>> upcoming() throws Exception {
         return ResponseEntity.ok(service.getUpcomingFestivals());
     }
+
 
     // 최근 본 축제 조회 API (쿠키 사용)
     @GetMapping("/recent")
